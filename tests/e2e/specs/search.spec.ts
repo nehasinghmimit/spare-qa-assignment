@@ -29,11 +29,21 @@ async function matchingResult(
   path: string,
 ) {
   await search.input.fill(name);
-  const link = search.panel.getByRole("link", { name, exact: true });
+  // Search links may include a launch query on the product's detail path.
+  const hrefs = [path, new URL(path, search.panel.page().url()).href];
+  const destinations = hrefs.flatMap((href) => [
+    `a[href=${JSON.stringify(href)}]`,
+    `a[href^=${JSON.stringify(`${href}?`)}]`,
+    `a[href^=${JSON.stringify(`${href}#`)}]`,
+  ]);
+  const link = search.panel
+    .getByRole("link", { name, exact: true })
+    .and(search.panel.locator(destinations.join(", ")));
+  await expect(
+    link,
+    "Expected one result with this name and product path",
+  ).toHaveCount(1);
   await expect(link).toBeVisible();
-  const href = await link.getAttribute("href");
-  if (!href || new URL(href, "https://www.producthunt.com").pathname !== path)
-    throw new Error("Search result must link to the discovered product");
   return link;
 }
 
