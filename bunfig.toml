@@ -1,0 +1,4 @@
+[test]
+root = "./tests/api/specs"
+timeout = 15000
+maxConcurrency = 1

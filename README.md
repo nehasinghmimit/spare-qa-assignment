@@ -1,0 +1,52 @@
+# Spare QA Engineering assignment
+
+This take-home covers public product discovery, logged-out access boundaries and the Product Hunt GraphQL API. Bun runs the TypeScript API tests. Playwright Test runs the browser scenarios. The repository is local. The public website, API and product data belong to Product Hunt. [Product Hunt](https://www.producthunt.com) · [API documentation](https://api.producthunt.com/v2/docs)
+
+| Deliverable              | Evidence                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Strategy and exploration | The strategy rendered on one page. Manual and API charters, findings and limitations are recorded. [Strategy](docs/test-strategy.md) · [Exploration](docs/exploratory-notes.md) · [Findings](docs/findings.md)                                                                                                                                       |
+| API                      | The Phase 3 live run passed all seven tests, also individually. The two cases edited in Phase 4 passed their targeted run. Phase 5 used these historical results.                                                                                                                                                                                    |
+| Browser                  | Seven implemented scenarios are discoverable. The Phase 4 headless preflight received HTTP 403 (“Just a moment...”) before any scenario started. A Phase 5 focused headed run of E2E-07 reached the listing but failed on a candidate detail navigation with HTTP 403. Zero successful scenario executions. Reliability remains unverified (LIM-01). |
+| CI                       | Three jobs authored locally. Hosted execution and runner access remain unverified. [Workflow](.github/workflows/tests.yml)                                                                                                                                                                                                                           |
+
+E2E reliability, the listing-label comparison (E2E-02), and comment eligibility (E2E-07) remain unverified. Hosted CI has not run. Commands for the next approved run are in the [submission readiness guide](docs/submission-readiness.md).
+
+## Setup
+
+Use Bun 1.4.4 and a supported Playwright platform. From the repository root, install the locked dependencies. Browser work also requires Chromium. On Linux, install its system dependencies with the second command. On Windows use `bun --bun x playwright install chromium`. [Bun installation](https://bun.sh/docs/installation) · [Playwright browser installation](https://playwright.dev/docs/browsers)
+
+```sh
+bun install --frozen-lockfile
+bun --bun x playwright install --with-deps chromium
+```
+
+For the full API suite, obtain your own developer token. If you have no local `.env`, copy `.env.example` to `.env` and privately set `PH_API_TOKEN` there, or set it in your shell. Keep existing local settings when repeating setup. The example supplies the public defaults for `PH_API_URL` and `PH_WEB_BASE_URL`. Public browser tests and the two credential-rejection cases run independently of the token. Missing credentials fail authenticated cases before fetch. [Developer dashboard](https://www.producthunt.com/v2/oauth/applications)
+
+| From the project root                                             | Purpose                                             |
+| ----------------------------------------------------------------- | --------------------------------------------------- |
+| `bun run typecheck`, `bun run lint`, `bun run format:check`       | Run separately to review types, lint and formatting |
+| `bun run format`                                                  | Apply formatting                                    |
+| `bun run test:api`                                                | Run the seven live API tests                        |
+| `bun test -t API-TEST-03`                                         | Run one API case                                    |
+| `bun run test:e2e --list`                                         | Inspect Playwright discovery                        |
+| `bun run test:e2e`                                                | Run the headless suite                              |
+| `bun run test:e2e --grep E2E-02`                                  | Run one browser scenario after preflight            |
+| `bun run test:e2e:headed`, `bun run test:e2e:debug --grep E2E-02` | Run visibly or debug a single scenario              |
+
+## Design and findings
+
+Bun discovers `tests/api/specs` only. The native-fetch client preserves HTTP status and untrusted JSON. Specs validate runtime shapes and distinguish OAuth 401 rejection from HTTP 200 GraphQL validation errors. Each case builds its own request headers and discovers its own records. The pagination test consumes an opaque cursor with NEWEST ordering in the October 1–8, 2026 UTC window. If fewer than two usable pages remain, investigate the data and verify a replacement window before editing the test. [Architecture](docs/architecture.md) · [Coverage map](docs/test-coverage.md)
+
+Playwright discovers `tests/e2e/specs` only. Tests use fresh contexts, one worker, condition-based assertions and zero retries. E2E-02 checks the destination and compares the complete listing label after removing its numeric rank with the detail H1. This label-to-heading mapping is provisional: the versioned listing observed during exploration could not be compared with its detail heading. E2E-07 inspects at most three discovered links and requires a visible comment gate on a successfully loaded detail page. Eligibility remains provisional. The 2.5-second visibility check can miss a control that renders later. Category page locators also need verification.
+
+Exploration established no confirmed defects or vulnerabilities. Observed missing and invalid credentials returned 401 with null data. Invalid GraphQL inputs returned structured errors. The logged-out comment gate appeared on a sample product. A generic error observed alongside it could not be reproduced consistently (Q-01). The ethical assessment covered read-only public behavior and did not establish server-side comment authorization.
+
+## CI and next steps
+
+The workflow targets pushes and pull requests to `main`, plus manual dispatch. Static and E2E jobs need no Product Hunt secret. PRs, including forks, and non-main dispatches run only the two credential-rejection cases. A push to main or a main dispatch runs the full API suite. Configure `PH_API_TOKEN` as a repository secret before that trusted run. A missing secret fails the API step. Only that step receives the token. Read-only repository permissions and checkout without persisted credentials apply to all three jobs. The workflow assumes reviewed code on main.
+
+A preflight access failure fails the E2E job. Failure uploads retain the sanitized preflight JSON or scenario failure screenshots for three days. Scenario traces are available locally under ignored output and need review before sharing. Global setup records its own diagnostic separately.
+
+1. Obtain an assignment-approved execution environment that can reach the live website. Run all seven headless scenarios there, investigate failures and repeat successful runs to assess reliability.
+2. Validate the workflow on a hosted runner after publication is separately authorized. Finish the interview rehearsal with an additional case. [Interview notes](docs/interview-notes.md)
+3. With more time, add controlled test data, accessibility and cross-browser coverage, and monitoring for discovery and API failures. [Requirement checklist](docs/assignment-checklist.md) · [Phase evidence](docs/phase-progress.md)

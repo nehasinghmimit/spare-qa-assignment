@@ -1,0 +1,15 @@
+node_modules/
+.env
+.env.*
+!.env.example
+test-results/
+playwright-report/
+blob-report/
+coverage/
+.auth/
+auth-state/
+*storage-state*.json
+*storageState*.json
+*.log
+*.tsbuildinfo
+artifacts/
